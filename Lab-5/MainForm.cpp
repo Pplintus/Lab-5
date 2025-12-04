@@ -141,7 +141,7 @@ MainForm::MainForm() {
 
 
     // Загружаем данные
-    dataManager->LoadFromFiles("employees.txt", "worktypes.txt");
+    dataManager->LoadFromDatabase();
     RefreshData();
     ApplyTheme(currentTheme);
 }
@@ -466,51 +466,127 @@ void MainForm::SortBySalary_Click(Object^ sender, EventArgs^ e) {
 }
 
 void MainForm::MenuLoad_Click(Object^ sender, EventArgs^ e) {
-    OpenFileDialog^ dlg = gcnew OpenFileDialog();
-    dlg->Filter = "Текстовые файлы (*.txt)|*.txt";
+    try {
+        // Простой диалог для выбора файла сотрудников
+        OpenFileDialog^ openDialog = gcnew OpenFileDialog();
+        openDialog->Filter = "Текстовые файлы (*.txt)|*.txt|Все файлы (*.*)|*.*";
+        openDialog->Title = "Выберите файл сотрудников";
+        openDialog->CheckFileExists = true;
 
-    dlg->Title = "Выберите файл сотрудников";
-    if (dlg->ShowDialog() == System::Windows::Forms::DialogResult::OK) {
-        String^ empFile = dlg->FileName;
+        if (openDialog->ShowDialog() == Windows::Forms::DialogResult::OK) {
+            String^ employeesFile = openDialog->FileName;
 
-        dlg->Title = "Выберите файл должностей";
-        if (dlg->ShowDialog() == System::Windows::Forms::DialogResult::OK) {
-            String^ wtFile = dlg->FileName;
+            // Простой диалог для выбора файла должностей
+            openDialog->Title = "Выберите файл должностей";
+            if (openDialog->ShowDialog() == Windows::Forms::DialogResult::OK) {
+                String^ workTypesFile = openDialog->FileName;
 
-            if (dataManager->LoadFromFiles(empFile, wtFile)) {
-                RefreshData();
-                MessageBox::Show("Данные загружены!", "Успех",
-                    MessageBoxButtons::OK, MessageBoxIcon::Information);
-            }
-            else {
-                MessageBox::Show("Ошибка загрузки!", "Ошибка",
-                    MessageBoxButtons::OK, MessageBoxIcon::Error);
+                // Загружаем данные из файлов
+                bool success = dataManager->LoadFromTextFile(employeesFile, workTypesFile);
+
+                if (success) {
+                    // Обновляем интерфейс
+                    RefreshData();
+
+                    // Показываем сообщение об успехе
+                    String^ message = String::Format(
+                        "Данные успешно загружены!\n\n" +
+                        "Файл сотрудников: {0}\n" +
+                        "Файл должностей: {1}\n\n" +
+                        "Загружено:\n" +
+                        "- Должностей: {2}\n" +
+                        "- Сотрудников: {3}",
+                        Path::GetFileName(employeesFile),
+                        Path::GetFileName(workTypesFile),
+                        dataManager->WorkTypes->Count,
+                        dataManager->Employees->Count);
+
+                    MessageBox::Show(message, "Успех",
+                        MessageBoxButtons::OK, MessageBoxIcon::Information);
+                }
+                else {
+                    // Показываем подробное сообщение об ошибке
+                    String^ errorMessage =
+                        "Не удалось загрузить данные из файлов.\n\n" +
+                        String::Format("Файлы:\n1. {0}\n2. {1}\n\n",
+                            employeesFile, workTypesFile) +
+                        "Возможные причины:\n" +
+                        "1. Файлы имеют неправильный формат\n" +
+                        "2. Файлы пустые или повреждены\n" +
+                        "3. Неверная кодировка (должна быть UTF-8)\n" +
+                        "4. Формат данных не соответствует ожидаемому\n\n" +
+                        "Проверьте, что файлы содержат данные в формате:\n" +
+                        "Для должностей: Название;Оклад\n" +
+                        "Для сотрудников: ФИО;Должность;Дни";
+
+                    MessageBox::Show(errorMessage, "Ошибка загрузки",
+                        MessageBoxButtons::OK, MessageBoxIcon::Error);
+                }
             }
         }
+    }
+    catch (Exception^ ex) {
+        MessageBox::Show("Ошибка при загрузке файлов: " + ex->Message,
+            "Исключение", MessageBoxButtons::OK, MessageBoxIcon::Error);
     }
 }
 
 void MainForm::MenuSave_Click(Object^ sender, EventArgs^ e) {
-    SaveFileDialog^ dlg = gcnew SaveFileDialog();
-    dlg->Filter = "Текстовые файлы (*.txt)|*.txt";
+    try {
+        // Проверяем, есть ли данные для сохранения
+        if (dataManager->WorkTypes->Count == 0 && dataManager->Employees->Count == 0) {
+            MessageBox::Show("Нет данных для сохранения!", "Внимание",
+                MessageBoxButtons::OK, MessageBoxIcon::Information);
+            return;
+        }
 
-    dlg->Title = "Сохранить файл сотрудников";
-    if (dlg->ShowDialog() == System::Windows::Forms::DialogResult::OK) {
-        String^ empFile = dlg->FileName;
+        // Диалог для сохранения файла сотрудников
+        SaveFileDialog^ saveDialog = gcnew SaveFileDialog();
+        saveDialog->Filter = "Текстовые файлы (*.txt)|*.txt|Все файлы (*.*)|*.*";
+        saveDialog->Title = "Сохранить файл сотрудников";
+        saveDialog->FileName = "employees.txt";
+        saveDialog->OverwritePrompt = true;
 
-        dlg->Title = "Сохранить файл должностей";
-        if (dlg->ShowDialog() == System::Windows::Forms::DialogResult::OK) {
-            String^ wtFile = dlg->FileName;
+        if (saveDialog->ShowDialog() == Windows::Forms::DialogResult::OK) {
+            String^ employeesFile = saveDialog->FileName;
 
-            if (dataManager->SaveToFiles(empFile, wtFile)) {
-                MessageBox::Show("Данные сохранены!", "Успех",
-                    MessageBoxButtons::OK, MessageBoxIcon::Information);
-            }
-            else {
-                MessageBox::Show("Ошибка сохранения!", "Ошибка",
-                    MessageBoxButtons::OK, MessageBoxIcon::Error);
+            // Диалог для сохранения файла должностей
+            saveDialog->Title = "Сохранить файл должностей";
+            saveDialog->FileName = "worktypes.txt";
+
+            if (saveDialog->ShowDialog() == Windows::Forms::DialogResult::OK) {
+                String^ workTypesFile = saveDialog->FileName;
+
+                // Сохраняем данные в файлы
+                bool success = dataManager->SaveToTextFile(employeesFile, workTypesFile);
+
+                if (success) {
+                    // Показываем сообщение об успехе
+                    String^ message = String::Format(
+                        "Данные успешно сохранены!\n\n" +
+                        "Файл сотрудников: {0}\n" +
+                        "Файл должностей: {1}\n\n" +
+                        "Сохранено:\n" +
+                        "- Должностей: {2}\n" +
+                        "- Сотрудников: {3}",
+                        Path::GetFileName(employeesFile),
+                        Path::GetFileName(workTypesFile),
+                        dataManager->WorkTypes->Count,
+                        dataManager->Employees->Count);
+
+                    MessageBox::Show(message, "Успех",
+                        MessageBoxButtons::OK, MessageBoxIcon::Information);
+                }
+                else {
+                    MessageBox::Show("Не удалось сохранить данные в файлы!", "Ошибка",
+                        MessageBoxButtons::OK, MessageBoxIcon::Error);
+                }
             }
         }
+    }
+    catch (Exception^ ex) {
+        MessageBox::Show("Ошибка при сохранении файлов: " + ex->Message,
+            "Исключение", MessageBoxButtons::OK, MessageBoxIcon::Error);
     }
 }
 
@@ -540,3 +616,4 @@ void MainForm::MenuLightTheme_Click(Object^ sender, EventArgs^ e) {
 void MainForm::MenuDarkTheme_Click(Object^ sender, EventArgs^ e) {
     ApplyTheme(Theme::Dark);
 }
+

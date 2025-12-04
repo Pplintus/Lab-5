@@ -131,6 +131,7 @@
     <ClCompile Include="Employee.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="MainForm.cpp" />
+    <ClCompile Include="TextFileManager.cpp" />
     <ClCompile Include="WorkType.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -143,6 +144,7 @@
       <FileType>CppForm</FileType>
     </ClInclude>
     <ClInclude Include="sql\sqlite3.h" />
+    <ClInclude Include="TextFileManager.h" />
     <ClInclude Include="WorkType.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

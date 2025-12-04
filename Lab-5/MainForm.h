@@ -1,6 +1,7 @@
 #pragma once
 #include "DataManager.h"
 #include "EditForm.h"
+#include "TextFileManager.h"
 
 namespace SalaryDepartmentApp {
 

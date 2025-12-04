@@ -17,7 +17,7 @@ EditForm::EditForm(FormMode mode, String^ editName) : mode(mode), originalName(e
 
     // Загружаем данные для редактирования
     DataManager^ dm = gcnew DataManager();
-    dm->LoadFromFiles("employees.txt", "worktypes.txt");
+    dm->LoadFromDatabase();
 
     if (mode == FormMode::EditEmployee && dm->Employees->ContainsKey(editName)) {
         Employee^ emp = dm->Employees[editName];
@@ -133,7 +133,7 @@ void EditForm::txtSalary_KeyPress(System::Object^ sender, System::Windows::Forms
 
 void EditForm::SetupForm() {
     DataManager^ dm = gcnew DataManager();
-    dm->LoadFromFiles("employees.txt", "worktypes.txt");
+    dm->LoadFromDatabase();
 
     switch (mode) {
     case FormMode::AddEmployee:
