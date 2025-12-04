@@ -23,7 +23,7 @@ namespace SalaryDepartmentApp {
         TextBox^ txtName;
         ComboBox^ cmbPosition;
         NumericUpDown^ numDays;
-        NumericUpDown^ numSalary;
+        TextBox^ txtSalary;      // ÈÇÌÅÍÅÍÎ: TextBox âìåñòî NumericUpDown
         Label^ lblTitle;
         Label^ lblField1;
         Label^ lblField2;
@@ -36,28 +36,45 @@ namespace SalaryDepartmentApp {
 
         void OK_Click(Object^ sender, EventArgs^ e);
         void Cancel_Click(Object^ sender, EventArgs^ e);
-
+        void ValidateInput(Object^ sender, EventArgs^ e);
         bool ValidateInput();
+        void ShowError(String^ message, Control^ control);
+        void txtSalary_KeyPress(Object^ sender, System::Windows::Forms::KeyPressEventArgs^ e);  // ÄÎÁÀÂËÅÍÎ
 
     public:
         property String^ EmployeeName {
-            String^ get() { return txtName->Text; }
+            String^ get() {
+                if (txtName != nullptr)
+                    return txtName->Text->Trim();
+                return "";
+            }
         }
 
         property String^ PositionName {
             String^ get() {
-                if (cmbPosition->SelectedItem != nullptr)
+                if (cmbPosition != nullptr && cmbPosition->SelectedItem != nullptr)
                     return cmbPosition->SelectedItem->ToString();
                 return "";
             }
         }
 
         property int WorkDays {
-            int get() { return (int)numDays->Value; }
+            int get() {
+                if (numDays != nullptr)
+                    return Decimal::ToInt32(numDays->Value);
+                return 0;
+            }
         }
 
         property int Salary {
-            int get() { return (int)numSalary->Value; }
+            int get() {
+                if (txtSalary != nullptr && !String::IsNullOrWhiteSpace(txtSalary->Text)) {
+                    int result = 0;
+                    if (Int32::TryParse(txtSalary->Text, result))
+                        return result;
+                }
+                return 0;
+            }
         }
 
         property bool IsOK {

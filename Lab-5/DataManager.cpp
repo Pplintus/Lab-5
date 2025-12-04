@@ -23,32 +23,113 @@ DataManager::DataManager() {
 }
 
 bool DataManager::AddWorkType(String^ name, int salary) {
-    if (String::IsNullOrWhiteSpace(name) || salary <= 0)
-        return false;
+    try {
+        // Валидация входных данных
+        if (System::String::IsNullOrWhiteSpace(name)) {
+            throw gcnew System::ArgumentException("Название должности не может быть пустым");
+        }
 
-    if (workTypes->ContainsKey(name))
-        return false;
+        String^ trimmedName = name->Trim();
+        if (trimmedName->Length < 2) {
+            throw gcnew System::ArgumentException("Название должности должно содержать минимум 2 символа");
+        }
 
-    workTypes->Add(name, gcnew WorkType(name, salary));
-    return true;
+        if (trimmedName->Length > 100) {
+            throw gcnew System::ArgumentException("Название должности не может быть длиннее 100 символов");
+        }
+
+        // Проверка на специальные символы
+        array<Char>^ invalidChars = { '/', '\\', ':', '*', '?', '"', '<', '>', '|', '@', '#', '$', '%', '^', '&', '=', '+' };
+        for each (Char c in invalidChars) {
+            if (trimmedName->Contains(c.ToString())) {
+                throw gcnew System::ArgumentException("Название должности содержит запрещенные символы");
+            }
+        }
+
+        if (salary <= 0) {
+            throw gcnew System::ArgumentException("Оклад должен быть положительным числом");
+        }
+
+        if (salary < 10000) {
+            throw gcnew System::ArgumentException("Оклад не может быть меньше 10,000 руб.");
+        }
+
+        if (salary > 1000000) {
+            throw gcnew System::ArgumentException("Оклад не может превышать 1,000,000 руб.");
+        }
+
+        if (workTypes->ContainsKey(trimmedName)) {
+            throw gcnew System::ArgumentException("Должность с таким названием уже существует");
+        }
+
+        workTypes->Add(trimmedName, gcnew WorkType(trimmedName, salary));
+        return true;
+    }
+    catch (Exception^ ex) {
+        System::Diagnostics::Debug::WriteLine("Ошибка добавления должности: " + ex->Message);
+        throw; // Пробрасываем дальше
+    }
 }
 
 bool DataManager::UpdateWorkType(String^ oldName, String^ newName, int salary) {
-    if (String::IsNullOrWhiteSpace(newName) || salary <= 0)
-        return false;
+    try {
+        // Валидация нового имени
+        if (System::String::IsNullOrWhiteSpace(newName)) {
+            throw gcnew System::ArgumentException("Название должности не может быть пустым");
+        }
 
-    if (!workTypes->ContainsKey(oldName))
-        return false;
+        String^ trimmedNewName = newName->Trim();
+        if (trimmedNewName->Length < 2) {
+            throw gcnew System::ArgumentException("Название должности должно содержать минимум 2 символа");
+        }
 
-    // Проверяем, используется ли должность
-    for each (KeyValuePair<String^, Employee^> emp in employees) {
-        if (emp.Value->Position->Name == oldName)
+        if (trimmedNewName->Length > 100) {
+            throw gcnew System::ArgumentException("Название должности не может быть длиннее 100 символов");
+        }
+
+        if (salary <= 0)
             return false;
-    }
 
-    workTypes->Remove(oldName);
-    workTypes->Add(newName, gcnew WorkType(newName, salary));
-    return true;
+        if (!workTypes->ContainsKey(oldName))
+            return false;
+
+        // Проверяем, используется ли должность сотрудниками
+        bool isUsed = false;
+        for each (KeyValuePair<String^, Employee^> emp in employees) {
+            if (emp.Value->Position->Name == oldName) {
+                isUsed = true;
+                break;
+            }
+        }
+
+        // Если должность используется, обновляем ее без удаления
+        if (isUsed) {
+            if (oldName != newName) {
+                // Нельзя менять имя используемой должности
+                throw gcnew System::ArgumentException("Нельзя изменить название должности, которая используется сотрудниками");
+            }
+            // Обновляем только зарплату
+            workTypes[oldName]->Salary = salary;
+
+            // Обновляем зарплату у всех сотрудников с этой должностью
+            for each (KeyValuePair<String^, Employee^> emp in employees) {
+                if (emp.Value->Position->Name == oldName) {
+                    emp.Value->Position->Salary = salary;
+                }
+            }
+        }
+        else {
+            // Должность не используется, можно удалить и создать новую
+            workTypes->Remove(oldName);
+            workTypes->Add(newName, gcnew WorkType(newName, salary));
+        }
+
+        return true;
+    }
+    catch (Exception^ ex) {
+        System::Diagnostics::Debug::WriteLine("Ошибка обновления должности: " + ex->Message);
+        throw;
+    }
 }
 
 bool DataManager::DeleteWorkType(String^ name) {
@@ -66,37 +147,96 @@ bool DataManager::DeleteWorkType(String^ name) {
 }
 
 bool DataManager::AddEmployee(String^ name, String^ positionName, int workDays) {
-    if (String::IsNullOrWhiteSpace(name) || workDays <= 0 || workDays > 30)
-        return false;
+    try {
+        // Валидация имени
+        if (System::String::IsNullOrWhiteSpace(name)) {
+            throw gcnew System::ArgumentException("Имя сотрудника не может быть пустым");
+        }
 
-    if (!workTypes->ContainsKey(positionName) || employees->ContainsKey(name))
-        return false;
+        String^ trimmedName = name->Trim();
+        if (trimmedName->Length < 2) {
+            throw gcnew System::ArgumentException("Имя сотрудника должно содержать минимум 2 символа");
+        }
 
-    Employee^ emp = gcnew Employee(name, workTypes[positionName], workDays);
-    employees->Add(name, emp);
-    return true;
+        if (trimmedName->Length > 50) {
+            throw gcnew System::ArgumentException("Имя сотрудника не может быть длиннее 50 символов");
+        }
+
+        // Проверка на специальные символы
+        array<Char>^ invalidChars = { '/', '\\', ':', '*', '?', '"', '<', '>', '|', '@', '#', '$', '%', '^', '&', '=', '+', ')', '(' };
+        for each (Char c in invalidChars) {
+            if (trimmedName->Contains(c.ToString())) {
+                throw gcnew System::ArgumentException("Имя сотрудника содержит запрещенные символы");
+            }
+        }
+
+        if (employees->ContainsKey(trimmedName)) {
+            throw gcnew System::ArgumentException("Сотрудник с таким именем уже существует");
+        }
+
+        if (!workTypes->ContainsKey(positionName)) {
+            throw gcnew System::ArgumentException("Указанная должность не существует");
+        }
+
+        if (workDays <= 0 || workDays > 30) {
+            throw gcnew System::ArgumentException("Количество рабочих дней должно быть от 1 до 30");
+        }
+
+        Employee^ emp = gcnew Employee(trimmedName, workTypes[positionName], workDays);
+        employees->Add(trimmedName, emp);
+        return true;
+    }
+    catch (Exception^ ex) {
+        System::Diagnostics::Debug::WriteLine("Ошибка добавления сотрудника: " + ex->Message);
+        throw;
+    }
 }
 
 bool DataManager::UpdateEmployee(String^ oldName, String^ newName, String^ positionName, int workDays) {
-    if (String::IsNullOrWhiteSpace(newName) || workDays <= 0 || workDays > 30)
-        return false;
+    try {
+        // Валидация нового имени
+        if (System::String::IsNullOrWhiteSpace(newName)) {
+            throw gcnew System::ArgumentException("Имя сотрудника не может быть пустым");
+        }
 
-    if (!workTypes->ContainsKey(positionName) || !employees->ContainsKey(oldName))
-        return false;
+        String^ trimmedNewName = newName->Trim();
+        if (trimmedNewName->Length < 2) {
+            throw gcnew System::ArgumentException("Имя сотрудника должно содержать минимум 2 символа");
+        }
 
-    if (oldName != newName && employees->ContainsKey(newName))
-        return false;
+        if (trimmedNewName->Length > 100) {
+            throw gcnew System::ArgumentException("Имя сотрудника не может быть длиннее 100 символов");
+        }
 
-    Employee^ emp = employees[oldName];
-    if (oldName != newName) {
-        employees->Remove(oldName);
-        employees->Add(newName, emp);
-        emp->FullName = newName;
+        if (!workTypes->ContainsKey(positionName)) {
+            throw gcnew System::ArgumentException("Указанная должность не существует");
+        }
+
+        if (workDays <= 0 || workDays > 30) {
+            throw gcnew System::ArgumentException("Количество рабочих дней должно быть от 1 до 30");
+        }
+
+        if (!employees->ContainsKey(oldName))
+            return false;
+
+        if (oldName != newName && employees->ContainsKey(newName))
+            return false;
+
+        Employee^ emp = employees[oldName];
+        if (oldName != newName) {
+            employees->Remove(oldName);
+            employees->Add(newName, emp);
+            emp->FullName = newName;
+        }
+
+        emp->Position = workTypes[positionName];
+        emp->WorkDays = workDays;
+        return true;
     }
-
-    emp->Position = workTypes[positionName];
-    emp->WorkDays = workDays;
-    return true;
+    catch (Exception^ ex) {
+        System::Diagnostics::Debug::WriteLine("Ошибка обновления сотрудника: " + ex->Message);
+        throw;
+    }
 }
 
 bool DataManager::DeleteEmployee(String^ name) {

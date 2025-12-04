@@ -1,13 +1,15 @@
 #include "MainForm.h"
+#include <sqlite3.h>
+
 
 using namespace System;
 using namespace System::Windows::Forms;
 using namespace SalaryDepartmentApp;
 
-[STAThread]
+[STAThreadAttribute]
 int main(array<String^>^ args) {
-    Application::EnableVisualStyles();
     Application::SetCompatibleTextRenderingDefault(false);
+    Application::EnableVisualStyles();
 
     MainForm^ form = gcnew MainForm();
     Application::Run(form);

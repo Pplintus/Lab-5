@@ -1,39 +1,34 @@
 #include "MainForm.h"
-#include "EditForm.h"
 
 using namespace SalaryDepartmentApp;
 
 MainForm::MainForm() {
     dataManager = gcnew DataManager();
-    InitializeComponent();
+    currentTheme = Theme::Light;
+    currentViewMode = ViewMode::Employees;
 
-    // Загружаем тестовые данные
-    dataManager->LoadFromFiles("employees.txt", "worktypes.txt");
-    RefreshData();
-}
-
-void MainForm::InitializeComponent() {
-    this->Text = "Отдел расчета зарплаты";
-    this->Size = System::Drawing::Size(900, 600);
+    // Инициализация компонентов в самом простом виде
+    this->Text = L"Отдел расчета зарплаты";
+    this->Size = System::Drawing::Size(1000, 700);
     this->StartPosition = FormStartPosition::CenterScreen;
 
-    // Панель заголовка
+    // Синяя панель заголовка
     System::Windows::Forms::Panel^ headerPanel = gcnew System::Windows::Forms::Panel();
-    headerPanel->Dock = System::Windows::Forms::DockStyle::Top;
+    headerPanel->Dock = DockStyle::Top;
     headerPanel->Height = 70;
-    headerPanel->BackColor = System::Drawing::Color::LightBlue;
+    headerPanel->BackColor = Color::LightBlue;
 
     System::Windows::Forms::Label^ title = gcnew System::Windows::Forms::Label();
-    title->Text = "Отдел расчета зарплаты \"Опушечка\"";
-    title->Font = gcnew System::Drawing::Font("Arial", 16, FontStyle::Bold);
-    title->Location = System::Drawing::Point(10, 10);
-    title->AutoSize = true;
+    title->Text = L"Отдел расчета зарплаты \"Опушечка\"";
+    title->Font = gcnew System::Drawing::Font(L"Arial", 16, FontStyle::Bold);
+    title->Location = Point(10, 0);
+    title->Size = System::Drawing::Size(400, 25);
 
-    lblTotalSalary = gcnew System::Windows::Forms::Label();
-    lblTotalSalary->Text = "Общая сумма выплат: 0 руб.";
-    lblTotalSalary->Font = gcnew System::Drawing::Font("Arial", 10);
-    lblTotalSalary->Location = System::Drawing::Point(10, 40);
-    lblTotalSalary->AutoSize = true;
+    lblTotalSalary = gcnew Label();
+    lblTotalSalary->Text = L"Общая сумма выплат: 0 руб.";
+    lblTotalSalary->Font = gcnew System::Drawing::Font(L"Arial", 10);
+    lblTotalSalary->Location = Point(10, 40);
+    lblTotalSalary->Size = System::Drawing::Size(300, 20);
 
     headerPanel->Controls->Add(title);
     headerPanel->Controls->Add(lblTotalSalary);
@@ -42,10 +37,11 @@ void MainForm::InitializeComponent() {
     // Меню
     System::Windows::Forms::MenuStrip^ menu = gcnew System::Windows::Forms::MenuStrip();
 
-    System::Windows::Forms::ToolStripMenuItem^ fileMenu = gcnew System::Windows::Forms::ToolStripMenuItem("Файл");
-    System::Windows::Forms::ToolStripMenuItem^ loadItem = gcnew System::Windows::Forms::ToolStripMenuItem("Загрузить");
-    System::Windows::Forms::ToolStripMenuItem^ saveItem = gcnew System::Windows::Forms::ToolStripMenuItem("Сохранить");
-    System::Windows::Forms::ToolStripMenuItem^ exitItem = gcnew System::Windows::Forms::ToolStripMenuItem("Выход");
+    // Файл
+    System::Windows::Forms::ToolStripMenuItem^ fileMenu = gcnew System::Windows::Forms::ToolStripMenuItem(L"Файл");
+    System::Windows::Forms::ToolStripMenuItem^ loadItem = gcnew System::Windows::Forms::ToolStripMenuItem(L"Загрузить");
+    System::Windows::Forms::ToolStripMenuItem^ saveItem = gcnew System::Windows::Forms::ToolStripMenuItem(L"Сохранить");
+    System::Windows::Forms::ToolStripMenuItem^ exitItem = gcnew System::Windows::Forms::ToolStripMenuItem(L"Выход");
 
     loadItem->Click += gcnew System::EventHandler(this, &MainForm::MenuLoad_Click);
     saveItem->Click += gcnew System::EventHandler(this, &MainForm::MenuSave_Click);
@@ -53,23 +49,38 @@ void MainForm::InitializeComponent() {
 
     fileMenu->DropDownItems->Add(loadItem);
     fileMenu->DropDownItems->Add(saveItem);
-    // Используем Add вместо AddSeparator
-    fileMenu->DropDownItems->Add(gcnew System::Windows::Forms::ToolStripSeparator()); // Исправлено!
+    fileMenu->DropDownItems->Add(gcnew System::Windows::Forms::ToolStripSeparator());
     fileMenu->DropDownItems->Add(exitItem);
 
-    System::Windows::Forms::ToolStripMenuItem^ dataMenu = gcnew System::Windows::Forms::ToolStripMenuItem("Данные");
-    System::Windows::Forms::ToolStripMenuItem^ addEmpItem = gcnew System::Windows::Forms::ToolStripMenuItem("Добавить сотрудника");
-    System::Windows::Forms::ToolStripMenuItem^ addWtItem = gcnew System::Windows::Forms::ToolStripMenuItem("Добавить должность");
+    // Вид
+    System::Windows::Forms::ToolStripMenuItem^ viewMenu = gcnew System::Windows::Forms::ToolStripMenuItem(L"Вид");
+    System::Windows::Forms::ToolStripMenuItem^ showEmpItem = gcnew System::Windows::Forms::ToolStripMenuItem(L"Показать сотрудников");
+    System::Windows::Forms::ToolStripMenuItem^ showWtItem = gcnew System::Windows::Forms::ToolStripMenuItem(L"Показать должности");
 
-    addEmpItem->Click += gcnew System::EventHandler(this, &MainForm::AddEmployee_Click);
-    addWtItem->Click += gcnew System::EventHandler(this, &MainForm::AddWorkType_Click);
+    showEmpItem->Click += gcnew System::EventHandler(this, &MainForm::ShowEmployees_Click);
+    showWtItem->Click += gcnew System::EventHandler(this, &MainForm::ShowWorkTypes_Click);
 
-    dataMenu->DropDownItems->Add(addEmpItem);
-    dataMenu->DropDownItems->Add(addWtItem);
+    viewMenu->DropDownItems->Add(showEmpItem);
+    viewMenu->DropDownItems->Add(showWtItem);
 
-    System::Windows::Forms::ToolStripMenuItem^ sortMenu = gcnew System::Windows::Forms::ToolStripMenuItem("Сортировка");
-    System::Windows::Forms::ToolStripMenuItem^ sortNameItem = gcnew System::Windows::Forms::ToolStripMenuItem("По имени");
-    System::Windows::Forms::ToolStripMenuItem^ sortSalaryItem = gcnew System::Windows::Forms::ToolStripMenuItem("По зарплате");
+    // Данные
+    System::Windows::Forms::ToolStripMenuItem^ dataMenu = gcnew System::Windows::Forms::ToolStripMenuItem(L"Данные");
+    System::Windows::Forms::ToolStripMenuItem^ addItem = gcnew System::Windows::Forms::ToolStripMenuItem(L"Добавить");
+    System::Windows::Forms::ToolStripMenuItem^ editItem = gcnew System::Windows::Forms::ToolStripMenuItem(L"Изменить");
+    System::Windows::Forms::ToolStripMenuItem^ deleteItem = gcnew System::Windows::Forms::ToolStripMenuItem(L"Удалить");
+
+    addItem->Click += gcnew System::EventHandler(this, &MainForm::Add_Click);
+    editItem->Click += gcnew System::EventHandler(this, &MainForm::Edit_Click);
+    deleteItem->Click += gcnew System::EventHandler(this, &MainForm::Delete_Click);
+
+    dataMenu->DropDownItems->Add(addItem);
+    dataMenu->DropDownItems->Add(editItem);
+    dataMenu->DropDownItems->Add(deleteItem);
+
+    // Сортировка
+    System::Windows::Forms::ToolStripMenuItem^ sortMenu = gcnew System::Windows::Forms::ToolStripMenuItem(L"Сортировка");
+    System::Windows::Forms::ToolStripMenuItem^ sortNameItem = gcnew System::Windows::Forms::ToolStripMenuItem(L"По имени");
+    System::Windows::Forms::ToolStripMenuItem^ sortSalaryItem = gcnew System::Windows::Forms::ToolStripMenuItem(L"По зарплате");
 
     sortNameItem->Click += gcnew System::EventHandler(this, &MainForm::SortByName_Click);
     sortSalaryItem->Click += gcnew System::EventHandler(this, &MainForm::SortBySalary_Click);
@@ -77,299 +88,455 @@ void MainForm::InitializeComponent() {
     sortMenu->DropDownItems->Add(sortNameItem);
     sortMenu->DropDownItems->Add(sortSalaryItem);
 
-    System::Windows::Forms::ToolStripMenuItem^ reportMenu = gcnew System::Windows::Forms::ToolStripMenuItem("Отчет");
-    System::Windows::Forms::ToolStripMenuItem^ totalItem = gcnew System::Windows::Forms::ToolStripMenuItem("Общая сумма");
+    // Отчет
+    System::Windows::Forms::ToolStripMenuItem^ reportMenu = gcnew System::Windows::Forms::ToolStripMenuItem(L"Отчет");
+    System::Windows::Forms::ToolStripMenuItem^ totalItem = gcnew System::Windows::Forms::ToolStripMenuItem(L"Общая сумма");
 
     totalItem->Click += gcnew System::EventHandler(this, &MainForm::ShowTotal_Click);
     reportMenu->DropDownItems->Add(totalItem);
 
+    // Тема
+    System::Windows::Forms::ToolStripMenuItem^ themeMenu = gcnew System::Windows::Forms::ToolStripMenuItem(L"Тема");
+    System::Windows::Forms::ToolStripMenuItem^ lightThemeItem = gcnew System::Windows::Forms::ToolStripMenuItem(L"Светлая");
+    System::Windows::Forms::ToolStripMenuItem^ darkThemeItem = gcnew System::Windows::Forms::ToolStripMenuItem(L"Темная");
+
+    lightThemeItem->Click += gcnew System::EventHandler(this, &MainForm::MenuLightTheme_Click);
+    darkThemeItem->Click += gcnew System::EventHandler(this, &MainForm::MenuDarkTheme_Click);
+
+    themeMenu->DropDownItems->Add(lightThemeItem);
+    themeMenu->DropDownItems->Add(darkThemeItem);
+
     menu->Items->Add(fileMenu);
+    menu->Items->Add(viewMenu);
     menu->Items->Add(dataMenu);
     menu->Items->Add(sortMenu);
     menu->Items->Add(reportMenu);
+    menu->Items->Add(themeMenu);
 
     this->MainMenuStrip = menu;
     this->Controls->Add(menu);
 
-    // Табы
-    tabControl = gcnew System::Windows::Forms::TabControl();
-    tabControl->Dock = System::Windows::Forms::DockStyle::Fill;
-    tabControl->Location = System::Drawing::Point(0, 94);
+    // Таблица с фиксированным размером в середине
+    dataGrid = gcnew System::Windows::Forms::DataGridView();
 
-    // Вкладка сотрудников
-    System::Windows::Forms::TabPage^ tabEmployees = gcnew System::Windows::Forms::TabPage("Сотрудники");
+    // Размер таблицы (меньше размера формы)
+    int tableWidth = 800;
+    int tableHeight = 500;
 
-    dataGridEmployees = gcnew System::Windows::Forms::DataGridView();
-    dataGridEmployees->Dock = System::Windows::Forms::DockStyle::Fill;
-    dataGridEmployees->AllowUserToAddRows = false;
-    dataGridEmployees->ReadOnly = true;
-    dataGridEmployees->SelectionMode = System::Windows::Forms::DataGridViewSelectionMode::FullRowSelect;
+    // Позиция для центрирования
+    int tableX = (1000 - tableWidth) / 2;
+    int tableY = (700 - tableHeight) / 2;
 
-    // Кнопки для сотрудников
-    System::Windows::Forms::FlowLayoutPanel^ empButtons = gcnew System::Windows::Forms::FlowLayoutPanel();
-    empButtons->Dock = System::Windows::Forms::DockStyle::Top;
-    empButtons->Height = 40;
+    dataGrid->Location = System::Drawing::Point(tableX, tableY);
+    dataGrid->Size = System::Drawing::Size(tableWidth, tableHeight);
 
-    System::Windows::Forms::Button^ btnAddEmp = gcnew System::Windows::Forms::Button();
-    btnAddEmp->Text = "Добавить";
-    btnAddEmp->Click += gcnew System::EventHandler(this, &MainForm::AddEmployee_Click);
+    // Настраиваем таблицу
+    dataGrid->AllowUserToAddRows = false;
+    dataGrid->ReadOnly = true;
+    dataGrid->SelectionMode = System::Windows::Forms::DataGridViewSelectionMode::FullRowSelect;
+    dataGrid->MultiSelect = false;
+    dataGrid->CellDoubleClick += gcnew System::Windows::Forms::DataGridViewCellEventHandler(this, &MainForm::DataGrid_CellDoubleClick);
 
-    System::Windows::Forms::Button^ btnDelEmp = gcnew System::Windows::Forms::Button();
-    btnDelEmp->Text = "Удалить";
-    btnDelEmp->Click += gcnew System::EventHandler(this, &MainForm::DeleteEmployee_Click);
+    this->Controls->Add(dataGrid);
 
-    empButtons->Controls->Add(btnAddEmp);
-    empButtons->Controls->Add(btnDelEmp);
 
-    tabEmployees->Controls->Add(dataGridEmployees);
-    tabEmployees->Controls->Add(empButtons);
+    // Загружаем данные
+    dataManager->LoadFromFiles("employees.txt", "worktypes.txt");
+    RefreshData();
+    ApplyTheme(currentTheme);
+}
 
-    // Вкладка должностей
-    System::Windows::Forms::TabPage^ tabWorkTypes = gcnew System::Windows::Forms::TabPage("Должности");
+// Остальные методы остаются как в предыдущем ответе, но с System::Void
+void MainForm::SwitchView(ViewMode mode) {
+    currentViewMode = mode;
+    RefreshData();
+}
 
-    dataGridWorkTypes = gcnew System::Windows::Forms::DataGridView();
-    dataGridWorkTypes->Dock = System::Windows::Forms::DockStyle::Fill;
-    dataGridWorkTypes->AllowUserToAddRows = false;
-    dataGridWorkTypes->ReadOnly = true;
-    dataGridWorkTypes->SelectionMode = System::Windows::Forms::DataGridViewSelectionMode::FullRowSelect;
+void MainForm::SetupDataGrid() {
+    dataGrid->Rows->Clear();
+    dataGrid->Columns->Clear();
 
-    // Кнопки для должностей
-    System::Windows::Forms::FlowLayoutPanel^ wtButtons = gcnew System::Windows::Forms::FlowLayoutPanel();
-    wtButtons->Dock = System::Windows::Forms::DockStyle::Top;
-    wtButtons->Height = 40;
+    if (currentViewMode == ViewMode::Employees) {
+        dataGrid->Columns->Add("colName", "ФИО");
+        dataGrid->Columns->Add("colPosition", "Должность");
+        dataGrid->Columns->Add("colSalary", "Оклад");
+        dataGrid->Columns->Add("colDays", "Отработано дней");
+        dataGrid->Columns->Add("colTotal", "Зарплата");
 
-    System::Windows::Forms::Button^ btnAddWt = gcnew System::Windows::Forms::Button();
-    btnAddWt->Text = "Добавить";
-    btnAddWt->Click += gcnew System::EventHandler(this, &MainForm::AddWorkType_Click);
+        dataGrid->Columns[0]->Width = 200;
+        dataGrid->Columns[1]->Width = 150;
+        dataGrid->Columns[2]->Width = 100;
+        dataGrid->Columns[3]->Width = 120;
+        dataGrid->Columns[4]->Width = 100;
+    }
+    else {
+        dataGrid->Columns->Add("colName", "Название должности");
+        dataGrid->Columns->Add("colSalary", "Оклад");
 
-    System::Windows::Forms::Button^ btnDelWt = gcnew System::Windows::Forms::Button();
-    btnDelWt->Text = "Удалить";
-    btnDelWt->Click += gcnew System::EventHandler(this, &MainForm::DeleteWorkType_Click);
-
-    wtButtons->Controls->Add(btnAddWt);
-    wtButtons->Controls->Add(btnDelWt);
-
-    tabWorkTypes->Controls->Add(dataGridWorkTypes);
-    tabWorkTypes->Controls->Add(wtButtons);
-
-    tabControl->TabPages->Add(tabEmployees);
-    tabControl->TabPages->Add(tabWorkTypes);
-
-    this->Controls->Add(tabControl);
+        dataGrid->Columns[0]->Width = 400;
+        dataGrid->Columns[1]->Width = 150;
+    }
 }
 
 void MainForm::RefreshData() {
-    // Обновляем общую сумму
     double total = dataManager->CalculateTotalSalary();
-    lblTotalSalary->Text = System::String::Format("Общая сумма выплат: {0:F2} руб.", total);
+    lblTotalSalary->Text = String::Format("Общая сумма выплат: {0:F2} руб.", total);
 
-    // Очищаем таблицы
-    dataGridEmployees->Rows->Clear();
-    dataGridEmployees->Columns->Clear();
-    dataGridWorkTypes->Rows->Clear();
-    dataGridWorkTypes->Columns->Clear();
+    SetupDataGrid();
 
-    // Настраиваем таблицу сотрудников
-    dataGridEmployees->Columns->Add("colName", "ФИО");
-    dataGridEmployees->Columns->Add("colPosition", "Должность");
-    dataGridEmployees->Columns->Add("colSalary", "Оклад");
-    dataGridEmployees->Columns->Add("colDays", "Дни");
-    dataGridEmployees->Columns->Add("colTotal", "Зарплата");
-
-    // Заполняем сотрудников
-    for each (System::Collections::Generic::KeyValuePair<System::String^, Employee^> emp in dataManager->Employees) {
-        dataGridEmployees->Rows->Add(
-            emp.Value->FullName,
-            emp.Value->Position->Name,
-            emp.Value->Position->Salary,
-            emp.Value->WorkDays,
-            System::String::Format("{0:F2}", emp.Value->GetSalary())
-        );
+    if (currentViewMode == ViewMode::Employees) {
+        for each (auto emp in dataManager->Employees) {
+            dataGrid->Rows->Add(
+                emp.Value->FullName,
+                emp.Value->Position->Name,
+                emp.Value->Position->Salary,
+                emp.Value->WorkDays,
+                String::Format("{0:F2}", emp.Value->GetSalary())
+            );
+        }
     }
-
-    // Настраиваем таблицу должностей
-    dataGridWorkTypes->Columns->Add("colName", "Название");
-    dataGridWorkTypes->Columns->Add("colSalary", "Оклад");
-
-    // Заполняем должности
-    for each (System::Collections::Generic::KeyValuePair<System::String^, WorkType^> wt in dataManager->WorkTypes) {
-        dataGridWorkTypes->Rows->Add(wt.Value->Name, wt.Value->Salary);
+    else {
+        for each (auto wt in dataManager->WorkTypes) {
+            dataGrid->Rows->Add(wt.Value->Name, wt.Value->Salary);
+        }
     }
 }
 
-// Обработчики событий
-void MainForm::MenuLoad_Click(System::Object^ sender, System::EventArgs^ e) {
-    System::Windows::Forms::OpenFileDialog^ dlg = gcnew System::Windows::Forms::OpenFileDialog();
-    dlg->Filter = "Текстовые файлы (*.txt)|*.txt";
+void MainForm::ApplyTheme(Theme theme) {
+    currentTheme = theme;
 
-    dlg->Title = "Выберите файл сотрудников";
-    if (dlg->ShowDialog() == System::Windows::Forms::DialogResult::OK) {
-        System::String^ empFile = dlg->FileName;
+    if (theme == Theme::Light) {
+        this->BackColor = SystemColors::Control;
+        this->ForeColor = SystemColors::ControlText;
 
-        dlg->Title = "Выберите файл должностей";
-        if (dlg->ShowDialog() == System::Windows::Forms::DialogResult::OK) {
-            System::String^ wtFile = dlg->FileName;
+        // Заголовочная панель
+        Control^ headerPanel = this->Controls[0];
+        headerPanel->BackColor = Color::LightBlue;
+        for each (Control ^ ctrl in headerPanel->Controls) {
+            ctrl->ForeColor = Color::Black;
+        }
 
-            if (dataManager->LoadFromFiles(empFile, wtFile)) {
+        // Меню
+        if (this->MainMenuStrip != nullptr) {
+            this->MainMenuStrip->BackColor = SystemColors::MenuBar;
+            this->MainMenuStrip->ForeColor = SystemColors::MenuText;
+        }
+
+        // Таблица
+        dataGrid->BackgroundColor = SystemColors::Window;
+        dataGrid->ForeColor = SystemColors::WindowText;
+        dataGrid->DefaultCellStyle->BackColor = SystemColors::Window;
+        dataGrid->DefaultCellStyle->ForeColor = SystemColors::WindowText;
+        dataGrid->GridColor = SystemColors::ControlDark;
+    }
+    else {
+        this->BackColor = Color::FromArgb(45, 45, 48);
+        this->ForeColor = Color::White;
+
+        // Заголовочная панель
+        Control^ headerPanel = this->Controls[0];
+        headerPanel->BackColor = Color::FromArgb(0, 78, 120);
+        for each (Control ^ ctrl in headerPanel->Controls) {
+            ctrl->ForeColor = Color::White;
+        }
+
+        // Меню
+        if (this->MainMenuStrip != nullptr) {
+            this->MainMenuStrip->BackColor = Color::FromArgb(45, 45, 48);
+            this->MainMenuStrip->ForeColor = Color::White;
+        }
+
+        // Таблица
+        dataGrid->BackgroundColor = Color::FromArgb(45, 45, 48);
+        dataGrid->ForeColor = Color::White;
+        dataGrid->DefaultCellStyle->BackColor = Color::FromArgb(45, 45, 48);
+        dataGrid->DefaultCellStyle->ForeColor = Color::White;
+        dataGrid->GridColor = Color::Gray;
+    }
+}
+
+// Обработчики переключения вида
+void MainForm::ShowEmployees_Click(Object^ sender, EventArgs^ e) {
+    SwitchView(ViewMode::Employees);
+}
+
+void MainForm::ShowWorkTypes_Click(Object^ sender, EventArgs^ e) {
+    SwitchView(ViewMode::WorkTypes);
+}
+
+// Универсальные обработчики
+void MainForm::Add_Click(Object^ sender, EventArgs^ e) {
+    if (currentViewMode == ViewMode::Employees) {
+        AddEmployee_Click(sender, e);
+    }
+    else {
+        AddWorkType_Click(sender, e);
+    }
+}
+
+void MainForm::Edit_Click(Object^ sender, EventArgs^ e) {
+    if (currentViewMode == ViewMode::Employees) {
+        EditSelectedEmployee();
+    }
+    else {
+        EditSelectedWorkType();
+    }
+}
+
+void MainForm::Delete_Click(Object^ sender, EventArgs^ e) {
+    if (currentViewMode == ViewMode::Employees) {
+        DeleteEmployee_Click(sender, e);
+    }
+    else {
+        DeleteWorkType_Click(sender, e);
+    }
+}
+
+void MainForm::DataGrid_CellDoubleClick(Object^ sender, DataGridViewCellEventArgs^ e) {
+    if (e->RowIndex >= 0) {
+        Edit_Click(sender, e);
+    }
+}
+
+void MainForm::EditSelectedEmployee() {
+    if (dataGrid->SelectedRows->Count > 0) {
+        String^ name = dataGrid->SelectedRows[0]->Cells[0]->Value->ToString();
+
+        EditForm^ form = gcnew EditForm(FormMode::EditEmployee, name);
+        if (form->ShowDialog() == System::Windows::Forms::DialogResult::OK && form->IsOK) {
+            String^ positionName = form->PositionName;
+
+            if (!dataManager->WorkTypes->ContainsKey(positionName)) {
+                MessageBox::Show("Выбранная должность не существует!", "Ошибка",
+                    MessageBoxButtons::OK, MessageBoxIcon::Error);
+                return;
+            }
+
+            if (dataManager->UpdateEmployee(name, form->EmployeeName, positionName, form->WorkDays)) {
                 RefreshData();
-                System::Windows::Forms::MessageBox::Show("Данные загружены!", "Успех",
-                    System::Windows::Forms::MessageBoxButtons::OK, System::Windows::Forms::MessageBoxIcon::Information);
+                MessageBox::Show("Данные сотрудника обновлены!", "Успех",
+                    MessageBoxButtons::OK, MessageBoxIcon::Information);
             }
             else {
-                System::Windows::Forms::MessageBox::Show("Ошибка загрузки!", "Ошибка",
-                    System::Windows::Forms::MessageBoxButtons::OK, System::Windows::Forms::MessageBoxIcon::Error);
+                MessageBox::Show("Ошибка при обновлении сотрудника!", "Ошибка",
+                    MessageBoxButtons::OK, MessageBoxIcon::Error);
             }
         }
     }
-}
-
-void MainForm::MenuSave_Click(System::Object^ sender, System::EventArgs^ e) {
-    System::Windows::Forms::SaveFileDialog^ dlg = gcnew System::Windows::Forms::SaveFileDialog();
-    dlg->Filter = "Текстовые файлы (*.txt)|*.txt";
-
-    dlg->Title = "Сохранить файл сотрудников";
-    if (dlg->ShowDialog() == System::Windows::Forms::DialogResult::OK) {
-        System::String^ empFile = dlg->FileName;
-
-        dlg->Title = "Сохранить файл должностей";
-        if (dlg->ShowDialog() == System::Windows::Forms::DialogResult::OK) {
-            System::String^ wtFile = dlg->FileName;
-
-            if (dataManager->SaveToFiles(empFile, wtFile)) {
-                System::Windows::Forms::MessageBox::Show("Данные сохранены!", "Успех",
-                    System::Windows::Forms::MessageBoxButtons::OK, System::Windows::Forms::MessageBoxIcon::Information);
-            }
-            else {
-                System::Windows::Forms::MessageBox::Show("Ошибка сохранения!", "Ошибка",
-                    System::Windows::Forms::MessageBoxButtons::OK, System::Windows::Forms::MessageBoxIcon::Error);
-            }
-        }
+    else {
+        MessageBox::Show("Выберите сотрудника для редактирования!", "Внимание",
+            MessageBoxButtons::OK, MessageBoxIcon::Information);
     }
 }
 
-void MainForm::MenuExit_Click(System::Object^ sender, System::EventArgs^ e) {
-    System::Windows::Forms::Application::Exit();
+void MainForm::EditSelectedWorkType() {
+    if (dataGrid->SelectedRows->Count > 0) {
+        String^ name = dataGrid->SelectedRows[0]->Cells[0]->Value->ToString();
+
+        EditForm^ form = gcnew EditForm(FormMode::EditWorkType, name);
+        if (form->ShowDialog() == System::Windows::Forms::DialogResult::OK && form->IsOK) {
+            if (dataManager->UpdateWorkType(name, form->EmployeeName, form->Salary)) {
+                RefreshData();
+                MessageBox::Show("Данные должности обновлены!", "Успех",
+                    MessageBoxButtons::OK, MessageBoxIcon::Information);
+            }
+            else {
+                MessageBox::Show("Ошибка при обновлении должности!", "Ошибка",
+                    MessageBoxButtons::OK, MessageBoxIcon::Error);
+            }
+        }
+    }
+    else {
+        MessageBox::Show("Выберите должность для редактирования!", "Внимание",
+            MessageBoxButtons::OK, MessageBoxIcon::Information);
+    }
 }
 
-void MainForm::AddEmployee_Click(System::Object^ sender, System::EventArgs^ e) {
+// Основные обработчики
+void MainForm::AddEmployee_Click(Object^ sender, EventArgs^ e) {
     EditForm^ form = gcnew EditForm(FormMode::AddEmployee);
     if (form->ShowDialog() == System::Windows::Forms::DialogResult::OK && form->IsOK) {
         if (dataManager->AddEmployee(form->EmployeeName, form->PositionName, form->WorkDays)) {
             RefreshData();
-            System::Windows::Forms::MessageBox::Show("Сотрудник добавлен!", "Успех",
-                System::Windows::Forms::MessageBoxButtons::OK, System::Windows::Forms::MessageBoxIcon::Information);
+            MessageBox::Show("Сотрудник добавлен!", "Успех",
+                MessageBoxButtons::OK, MessageBoxIcon::Information);
         }
         else {
-            System::Windows::Forms::MessageBox::Show("Ошибка при добавлении сотрудника!", "Ошибка",
-                System::Windows::Forms::MessageBoxButtons::OK, System::Windows::Forms::MessageBoxIcon::Error);
+            MessageBox::Show("Ошибка при добавлении сотрудника!", "Ошибка",
+                MessageBoxButtons::OK, MessageBoxIcon::Error);
         }
     }
 }
 
-void MainForm::AddWorkType_Click(System::Object^ sender, System::EventArgs^ e) {
+void MainForm::AddWorkType_Click(Object^ sender, EventArgs^ e) {
     EditForm^ form = gcnew EditForm(FormMode::AddWorkType);
     if (form->ShowDialog() == System::Windows::Forms::DialogResult::OK && form->IsOK) {
         if (dataManager->AddWorkType(form->EmployeeName, form->Salary)) {
             RefreshData();
-            System::Windows::Forms::MessageBox::Show("Должность добавлена!", "Успех",
-                System::Windows::Forms::MessageBoxButtons::OK, System::Windows::Forms::MessageBoxIcon::Information);
+            MessageBox::Show("Должность добавлена!", "Успех",
+                MessageBoxButtons::OK, MessageBoxIcon::Information);
         }
         else {
-            System::Windows::Forms::MessageBox::Show("Ошибка при добавлении должности!", "Ошибка",
-                System::Windows::Forms::MessageBoxButtons::OK, System::Windows::Forms::MessageBoxIcon::Error);
+            MessageBox::Show("Ошибка при добавлении должности!", "Ошибка",
+                MessageBoxButtons::OK, MessageBoxIcon::Error);
         }
     }
 }
 
-void MainForm::DeleteEmployee_Click(System::Object^ sender, System::EventArgs^ e) {
-    if (dataGridEmployees->SelectedRows->Count > 0) {
-        System::String^ name = dataGridEmployees->SelectedRows[0]->Cells[0]->Value->ToString();
+void MainForm::DeleteEmployee_Click(Object^ sender, EventArgs^ e) {
+    if (dataGrid->SelectedRows->Count > 0) {
+        String^ name = dataGrid->SelectedRows[0]->Cells[0]->Value->ToString();
 
-        if (System::Windows::Forms::MessageBox::Show("Удалить сотрудника " + name + "?",
-            "Подтверждение", System::Windows::Forms::MessageBoxButtons::YesNo,
-            System::Windows::Forms::MessageBoxIcon::Question) == System::Windows::Forms::DialogResult::Yes) {
+        if (MessageBox::Show("Удалить сотрудника " + name + "?",
+            "Подтверждение", MessageBoxButtons::YesNo,
+            MessageBoxIcon::Question) == System::Windows::Forms::DialogResult::Yes) {
 
             if (dataManager->DeleteEmployee(name)) {
                 RefreshData();
-                System::Windows::Forms::MessageBox::Show("Сотрудник удален!", "Успех",
-                    System::Windows::Forms::MessageBoxButtons::OK, System::Windows::Forms::MessageBoxIcon::Information);
+                MessageBox::Show("Сотрудник удален!", "Успех",
+                    MessageBoxButtons::OK, MessageBoxIcon::Information);
             }
             else {
-                System::Windows::Forms::MessageBox::Show("Ошибка при удалении сотрудника!", "Ошибка",
-                    System::Windows::Forms::MessageBoxButtons::OK, System::Windows::Forms::MessageBoxIcon::Error);
+                MessageBox::Show("Ошибка при удалении сотрудника!", "Ошибка",
+                    MessageBoxButtons::OK, MessageBoxIcon::Error);
             }
         }
     }
 }
 
-void MainForm::DeleteWorkType_Click(System::Object^ sender, System::EventArgs^ e) {
-    if (dataGridWorkTypes->SelectedRows->Count > 0) {
-        System::String^ name = dataGridWorkTypes->SelectedRows[0]->Cells[0]->Value->ToString();
+void MainForm::DeleteWorkType_Click(Object^ sender, EventArgs^ e) {
+    if (dataGrid->SelectedRows->Count > 0) {
+        String^ name = dataGrid->SelectedRows[0]->Cells[0]->Value->ToString();
 
-        if (System::Windows::Forms::MessageBox::Show("Удалить должность " + name + "?",
-            "Подтверждение", System::Windows::Forms::MessageBoxButtons::YesNo,
-            System::Windows::Forms::MessageBoxIcon::Question) == System::Windows::Forms::DialogResult::Yes) {
+        if (MessageBox::Show("Удалить должность " + name + "?",
+            "Подтверждение", MessageBoxButtons::YesNo,
+            MessageBoxIcon::Question) == System::Windows::Forms::DialogResult::Yes) {
 
             if (dataManager->DeleteWorkType(name)) {
                 RefreshData();
-                System::Windows::Forms::MessageBox::Show("Должность удалена!", "Успех",
-                    System::Windows::Forms::MessageBoxButtons::OK, System::Windows::Forms::MessageBoxIcon::Information);
+                MessageBox::Show("Должность удалена!", "Успех",
+                    MessageBoxButtons::OK, MessageBoxIcon::Information);
             }
             else {
-                System::Windows::Forms::MessageBox::Show("Нельзя удалить должность, используемую сотрудниками!", "Ошибка",
-                    System::Windows::Forms::MessageBoxButtons::OK, System::Windows::Forms::MessageBoxIcon::Error);
+                MessageBox::Show("Нельзя удалить должность, используемую сотрудниками!", "Ошибка",
+                    MessageBoxButtons::OK, MessageBoxIcon::Error);
             }
         }
     }
 }
 
-void MainForm::SortByName_Click(System::Object^ sender, System::EventArgs^ e) {
-    dataGridEmployees->Rows->Clear();
+void MainForm::SortByName_Click(Object^ sender, EventArgs^ e) {
+    if (currentViewMode == ViewMode::Employees) {
+        dataGrid->Rows->Clear();
 
-    System::Collections::Generic::List<Employee^>^ sorted = dataManager->GetEmployeesSortedByName();
-    for each (Employee ^ emp in sorted) {
-        dataGridEmployees->Rows->Add(
-            emp->FullName,
-            emp->Position->Name,
-            emp->Position->Salary,
-            emp->WorkDays,
-            System::String::Format("{0:F2}", emp->GetSalary())
-        );
+        auto sorted = dataManager->GetEmployeesSortedByName();
+        for each (auto emp in sorted) {
+            dataGrid->Rows->Add(
+                emp->FullName,
+                emp->Position->Name,
+                emp->Position->Salary,
+                emp->WorkDays,
+                String::Format("{0:F2}", emp->GetSalary())
+            );
+        }
+
+        MessageBox::Show("Отсортировано по имени", "Сортировка",
+            MessageBoxButtons::OK, MessageBoxIcon::Information);
     }
-
-    System::Windows::Forms::MessageBox::Show("Отсортировано по имени", "Сортировка",
-        System::Windows::Forms::MessageBoxButtons::OK, System::Windows::Forms::MessageBoxIcon::Information);
 }
 
-void MainForm::SortBySalary_Click(System::Object^ sender, System::EventArgs^ e) {
-    dataGridEmployees->Rows->Clear();
+void MainForm::SortBySalary_Click(Object^ sender, EventArgs^ e) {
+    if (currentViewMode == ViewMode::Employees) {
+        dataGrid->Rows->Clear();
 
-    System::Collections::Generic::List<Employee^>^ sorted = dataManager->GetEmployeesSortedBySalary();
-    for each (Employee ^ emp in sorted) {
-        dataGridEmployees->Rows->Add(
-            emp->FullName,
-            emp->Position->Name,
-            emp->Position->Salary,
-            emp->WorkDays,
-            System::String::Format("{0:F2}", emp->GetSalary())
-        );
+        auto sorted = dataManager->GetEmployeesSortedBySalary();
+        for each (auto emp in sorted) {
+            dataGrid->Rows->Add(
+                emp->FullName,
+                emp->Position->Name,
+                emp->Position->Salary,
+                emp->WorkDays,
+                String::Format("{0:F2}", emp->GetSalary())
+            );
+        }
+
+        MessageBox::Show("Отсортировано по зарплате", "Сортировка",
+            MessageBoxButtons::OK, MessageBoxIcon::Information);
     }
-
-    System::Windows::Forms::MessageBox::Show("Отсортировано по зарплате", "Сортировка",
-        System::Windows::Forms::MessageBoxButtons::OK, System::Windows::Forms::MessageBoxIcon::Information);
 }
 
-void MainForm::ShowTotal_Click(System::Object^ sender, System::EventArgs^ e) {
+void MainForm::MenuLoad_Click(Object^ sender, EventArgs^ e) {
+    OpenFileDialog^ dlg = gcnew OpenFileDialog();
+    dlg->Filter = "Текстовые файлы (*.txt)|*.txt";
+
+    dlg->Title = "Выберите файл сотрудников";
+    if (dlg->ShowDialog() == System::Windows::Forms::DialogResult::OK) {
+        String^ empFile = dlg->FileName;
+
+        dlg->Title = "Выберите файл должностей";
+        if (dlg->ShowDialog() == System::Windows::Forms::DialogResult::OK) {
+            String^ wtFile = dlg->FileName;
+
+            if (dataManager->LoadFromFiles(empFile, wtFile)) {
+                RefreshData();
+                MessageBox::Show("Данные загружены!", "Успех",
+                    MessageBoxButtons::OK, MessageBoxIcon::Information);
+            }
+            else {
+                MessageBox::Show("Ошибка загрузки!", "Ошибка",
+                    MessageBoxButtons::OK, MessageBoxIcon::Error);
+            }
+        }
+    }
+}
+
+void MainForm::MenuSave_Click(Object^ sender, EventArgs^ e) {
+    SaveFileDialog^ dlg = gcnew SaveFileDialog();
+    dlg->Filter = "Текстовые файлы (*.txt)|*.txt";
+
+    dlg->Title = "Сохранить файл сотрудников";
+    if (dlg->ShowDialog() == System::Windows::Forms::DialogResult::OK) {
+        String^ empFile = dlg->FileName;
+
+        dlg->Title = "Сохранить файл должностей";
+        if (dlg->ShowDialog() == System::Windows::Forms::DialogResult::OK) {
+            String^ wtFile = dlg->FileName;
+
+            if (dataManager->SaveToFiles(empFile, wtFile)) {
+                MessageBox::Show("Данные сохранены!", "Успех",
+                    MessageBoxButtons::OK, MessageBoxIcon::Information);
+            }
+            else {
+                MessageBox::Show("Ошибка сохранения!", "Ошибка",
+                    MessageBoxButtons::OK, MessageBoxIcon::Error);
+            }
+        }
+    }
+}
+
+void MainForm::MenuExit_Click(Object^ sender, EventArgs^ e) {
+    Application::Exit();
+}
+
+void MainForm::ShowTotal_Click(Object^ sender, EventArgs^ e) {
     double total = dataManager->CalculateTotalSalary();
     int count = dataManager->Employees->Count;
 
-    System::String^ message = System::String::Format(
+    String^ message = String::Format(
         "Общая сумма выплат: {0:F2} руб.\n" +
         "Количество сотрудников: {1}\n" +
         "Средняя зарплата: {2:F2} руб.",
         total, count, (count > 0 ? total / count : 0)
     );
 
-    System::Windows::Forms::MessageBox::Show(message, "Отчет по выплатам",
-        System::Windows::Forms::MessageBoxButtons::OK, System::Windows::Forms::MessageBoxIcon::Information);
+    MessageBox::Show(message, "Отчет по выплатам",
+        MessageBoxButtons::OK, MessageBoxIcon::Information);
+}
+
+void MainForm::MenuLightTheme_Click(Object^ sender, EventArgs^ e) {
+    ApplyTheme(Theme::Light);
+}
+
+void MainForm::MenuDarkTheme_Click(Object^ sender, EventArgs^ e) {
+    ApplyTheme(Theme::Dark);
 }
